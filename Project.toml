@@ -3,11 +3,15 @@ uuid = "7471f43b-dd8c-41d1-b4c5-68aea2f53e85"
 authors = ["Vincent Le Chenadec <vincentlechenadec@gmail.com> and contributors"]
 version = "0.1.0"
 
-[extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+[deps]
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [compat]
 julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test"]
