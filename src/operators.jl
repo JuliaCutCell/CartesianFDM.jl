@@ -1,9 +1,10 @@
-struct FDMOperators{N,R,T,D,S,M}
+struct FDMOperators{N,R,T,D,S,M,E}
     ρ::R
     τ::NTuple{2,NTuple{N,T}}
     δ::NTuple{2,NTuple{N,D}}
     σ::NTuple{2,NTuple{N,S}}
-    μ::NTuple{N,M}
+    μ::Tuple{M,NTuple{N,M}}
+    ε::E
 end
 
 function fdmoperators(bc, n)
@@ -12,11 +13,9 @@ function fdmoperators(bc, n)
     δ = Ref(ρ) .- τ[1], τ[2] .- Ref(ρ)
     σ = Ref(ρ) .+ τ[1], τ[2] .+ Ref(ρ)
     μ = maskmatrices(bc, n)
-    FDMOperators(ρ, τ, δ, σ, μ)
+    ε = only(@variables(ε))
+    FDMOperators(ρ, τ, δ, σ, μ, ε)
 end
-
-# ρ, (τ⁻, τ⁺), (δ⁻, δ⁺), (σ⁻, σ⁺), μ = unpack(op)
-unpack(x::FDMOperators) = x.ρ, x.τ, x.δ, x.σ, x.μ
 
 """
 
@@ -68,10 +67,21 @@ _backwardshift(::Periodic, n::Int) =
 
 """
 function maskmatrices(bc, n)
+    opn = _mask.(bc, n)
+    μ⁰ = kron(reverse(opn)...)
+
     opn = _normal.(bc, n)
     eye = _tangent.(bc, n)
-    _kron(opn, eye)
+    μ¹ = _kron(opn, eye)
+
+    μ⁰, μ¹
 end
+
+_mask(::BoundaryCondition, n::Int) =
+    spdiagm(0 => [i ≠ n for i in 1:n])
+
+_mask(::Periodic, n::Int) =
+    spdiagm(0 => ones(Bool, n))
 
 _normal(::BoundaryCondition, n::Int) =
     spdiagm(0 => [i ≠ 1 && i ≠ n for i in 1:n])

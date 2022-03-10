@@ -12,7 +12,7 @@ export scalar, vector
 export Periodic, periodic
 export Dirichlet, dirichlet
 export FDMOperators, fdmoperators
-export mask, gradient, divergence
+export mask, pad, gradient, divergence
 
 include("symbolics.jl")
 include("boundary.jl")
