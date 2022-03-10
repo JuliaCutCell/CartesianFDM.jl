@@ -7,8 +7,12 @@ ops = fdmoperators(bc, n)
 
 
 ### symbolic
+ε = only(@variables(ε))
+
 # metrics
-V = pad(ops, mask(ops, scalar(:V, n)))
+V = replace!(mask(ops, scalar(:V, n))) do el
+    iszero(el) ? ε : el
+end
 A = mask(ops, vector(:A, n))
 
 # primary

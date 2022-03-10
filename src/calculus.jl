@@ -13,17 +13,6 @@ function mask(ops, A::Union{TupleN{T},AbstractVector{T}}) where {T<:AbstractVect
 end
 
 """
-    pad(ops, X)
-
-"""
-function pad(ops, X)
-    ε = getproperty(ops, :ε)
-    map(X) do x
-        iszero(x) ? ε : x
-    end
-end
-
-"""
     gradient(ops, A, V, T, D)
 
 Compute the gradient of T with Dirichlet boundary condition D.

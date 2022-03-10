@@ -3,7 +3,8 @@ module CartesianFDM
 using LinearAlgebra
 using SparseArrays
 
-using Symbolics
+using Reexport
+@reexport using Symbolics
 
 const subscripts = ("\u2081", "\u2082", "\u2083")
 const TupleN{T,N} = NTuple{N,T}
@@ -12,7 +13,7 @@ export scalar, vector
 export Periodic, periodic
 export Dirichlet, dirichlet
 export FDMOperators, fdmoperators
-export mask, pad, gradient, divergence
+export mask, gradient, divergence
 
 include("symbolics.jl")
 include("boundary.jl")

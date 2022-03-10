@@ -1,10 +1,9 @@
-struct FDMOperators{N,R,T,D,S,M,E}
+struct FDMOperators{N,R,T,D,S,M}
     ρ::R
     τ::NTuple{2,NTuple{N,T}}
     δ::NTuple{2,NTuple{N,D}}
     σ::NTuple{2,NTuple{N,S}}
     μ::Tuple{M,NTuple{N,M}}
-    ε::E
 end
 
 function fdmoperators(bc, n)
@@ -13,8 +12,7 @@ function fdmoperators(bc, n)
     δ = Ref(ρ) .- τ[1], τ[2] .- Ref(ρ)
     σ = Ref(ρ) .+ τ[1], τ[2] .+ Ref(ρ)
     μ = maskmatrices(bc, n)
-    ε = only(@variables(ε))
-    FDMOperators(ρ, τ, δ, σ, μ, ε)
+    FDMOperators(ρ, τ, δ, σ, μ)
 end
 
 """
