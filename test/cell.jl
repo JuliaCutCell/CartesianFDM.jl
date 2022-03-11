@@ -1,7 +1,7 @@
 using CartesianFDM
 
-n = (17, 17)
-bc = (dirichlet(), dirichlet())
+n = (6,)
+bc = (dirichlet(),)
 
 ops = fdmoperators(bc, n)
 
@@ -34,10 +34,27 @@ D̂ = zeros(Bool, prod(n))
 Ĝ = gradient(ops, Â, V̂, T, D̂)
 L̂ = divergence(ops, Â, Ĝ)
 
-# unsteady heat conduction on a square
-# (homogeneous B.C. is non-periodic)
-using Symbolics
+###
+using SparseArrays
 
+Ĵ = sparse(Symbolics.jacobian(L̂, T))
+A = eval(first(build_function(Ĵ)))()
+
+T̂ = rand(prod(n))
+
+b̂₁ = A * T̂
+b̂₂ = eval(first(build_function(L̂, T)))(T̂)
+
+using LinearAlgebra
+
+@show norm(b̂₁ - b̂₂)
+
+#=
+"""
+Unsteady heat conduction on a square
+(homogeneous B.C. is non-periodic).
+
+"""
 @variables t p
 (rhs, rhs!) = build_function(L̂, T, p, t)
 
@@ -51,3 +68,7 @@ sol = solve(prob)
 using Plots
 
 heatmap(reshape(sol(1), n...))
+=#
+
+nothing
+

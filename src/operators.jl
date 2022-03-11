@@ -18,6 +18,10 @@ end
 """
 
 """
+_kron(opn) = opn
+
+_kron(opn...) = kron(reverse(opn)...)
+
 _kron(opn::NTuple{1}, eye::NTuple{1}) = opn
 
 _kron(opn::NTuple{2}, eye::NTuple{2}) =
@@ -66,7 +70,7 @@ _backwardshift(::Periodic, n::Int) =
 """
 function maskmatrices(bc, n)
     opn = _mask.(bc, n)
-    μ⁰ = kron(reverse(opn)...)
+    μ⁰ = _kron(opn...)
 
     opn = _normal.(bc, n)
     eye = _tangent.(bc, n)
