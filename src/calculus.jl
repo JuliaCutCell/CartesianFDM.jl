@@ -66,3 +66,23 @@ function divergence(ops, A, U, W)
     end
 end
 
+"""
+    strainrate(ops, A, V, U, W)
+
+!!! note
+
+    For now, only diagonal terms (and extra factor 2).
+
+"""
+function strainrate(ops, A, V, U, W)
+    ((δ⁻, δ⁺), (σ⁻, σ⁺)) = getproperty.(Ref(ops), (:δ, :σ))
+    map(product(eachindex(A), eachindex(A))) do (i, j)
+        if i == j
+            ((2δ⁺[i] * (A[i] .* U[i])) .- ((δ⁺[i] * A[i]) .* (σ⁺[i] * W[i]))) ./ V
+        else
+            (4δ⁻[j] * ((σ⁻[i] * (σ⁺[j] * A[j])) .* U[i])
+             .- (σ⁻[j] * ((σ⁻[i] * (δ⁺[j] * A[j])) .* W[i]))) ./ (σ⁻[j] * (σ⁻[i] * V))
+        end
+    end
+end
+

@@ -1,5 +1,7 @@
 module CartesianFDM
 
+using Base.Iterators
+
 using LinearAlgebra
 using SparseArrays
 
@@ -13,7 +15,7 @@ export scalar, vector
 export Periodic, periodic
 export Dirichlet, dirichlet
 export FDMOperators, fdmoperators
-export mask, gradient, divergence
+export mask, gradient, divergence, strainrate
 
 include("symbolics.jl")
 include("boundary.jl")

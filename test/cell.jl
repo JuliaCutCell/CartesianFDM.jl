@@ -1,10 +1,9 @@
 using CartesianFDM
 
-n = (6, 6)
-bc = ntuple(dirichlet, length(n))
+n = (17, 17)
+bc = (dirichlet(), dirichlet())
 
 ops = fdmoperators(bc, n)
-
 
 ### symbolic
 ε = only(@variables(ε))
@@ -35,19 +34,20 @@ D̂ = zeros(Bool, prod(n))
 Ĝ = gradient(ops, Â, V̂, T, D̂)
 L̂ = divergence(ops, Â, Ĝ)
 
-#=
-# unsteady heat conduction on a square with homogeneous Dirichlet B.C.
+# unsteady heat conduction on a square
+# (homogeneous B.C. is non-periodic)
 using Symbolics
 
 @variables t p
-(rhs, rhs!) = build_function(L̂, T, p, t, expression = Val{false})
-
-T̂ = ones(prod(n))
+(rhs, rhs!) = build_function(L̂, T, p, t)
 
 using DifferentialEquations
 
-tspan = (0.0,100.0)
-prob = ODEProblem(rhs!, T̂, tspan)
+tspan = (0.0, 100.0)
+T̂ = ones(prod(n))
+prob = ODEProblem(eval(rhs!), T̂, tspan)
 sol = solve(prob)
-=#
 
+using Plots
+
+heatmap(reshape(sol(1), n...))
