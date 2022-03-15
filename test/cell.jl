@@ -1,7 +1,7 @@
 using CartesianFDM
 
-n = (6,)
-bc = (dirichlet(),)
+n = (6, 6)
+bc = ntuple(dirichlet, length(n))
 
 ops = fdmoperators(bc, n)
 
@@ -21,6 +21,9 @@ D = scalar(:D, n)
 # secondary
 G = gradient(ops, A, V, T, D)
 L = divergence(ops, A, G)
+
+# remove ε
+L = substitute.(L, Ref(Dict([ε => 0])))
 
 ### numerical
 V̂ = map(mask(ops, ones(Float64, prod(n)))) do x
@@ -50,11 +53,10 @@ using LinearAlgebra
 @show norm(b̂₁ - b̂₂)
 
 #=
-"""
 Unsteady heat conduction on a square
 (homogeneous B.C. is non-periodic).
 
-"""
+=#
 @variables t p
 (rhs, rhs!) = build_function(L̂, T, p, t)
 
@@ -67,8 +69,5 @@ sol = solve(prob)
 
 using Plots
 
-heatmap(reshape(sol(1), n...))
-=#
-
-nothing
+heatmap(reshape(sol(0.1), n...))
 

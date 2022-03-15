@@ -72,6 +72,7 @@ end
 !!! note
 
     For now, only diagonal terms (and extra factor 2).
+    Also, Dirichlet.
 
 """
 function strainrate(ops, A, V, U, W)
@@ -80,8 +81,31 @@ function strainrate(ops, A, V, U, W)
         if i == j
             ((2δ⁺[i] * (A[i] .* U[i])) .- ((δ⁺[i] * A[i]) .* (σ⁺[i] * W[i]))) ./ V
         else
-            (4δ⁻[j] * ((σ⁻[i] * (σ⁺[j] * A[j])) .* U[i])
-             .- (σ⁻[j] * ((σ⁻[i] * (δ⁺[j] * A[j])) .* W[i]))) ./ (σ⁻[j] * (σ⁻[i] * V))
+            (2δ⁻[j] * ((σ⁻[i] * (σ⁺[j] * A[j])) .* U[i])
+             .- (σ⁻[j] * ((σ⁻[i] * (δ⁺[j] * A[j])) .* W[i]))) ./ (σ⁻[j] * (σ⁻[i] * V)) .+
+            (2δ⁻[i] * ((σ⁻[j] * (σ⁺[i] * A[i])) .* U[j])
+             .- (σ⁻[i] * ((σ⁻[j] * (δ⁺[i] * A[i])) .* W[j]))) ./ (σ⁻[i] * (σ⁻[j] * V))
+        end
+    end
+end
+
+"""
+    divergence2(ops, A, E)
+
+!!! note
+
+    Also, Dirichlet.
+
+"""
+function divergence2(ops, A, E)
+    ((δ⁻, δ⁺), (σ⁻, σ⁺)) = getproperty.(Ref(ops), (:δ, :σ))
+    map(eachindex(A)) do i
+        mapreduce(+, eachindex(A)) do j
+            if i == j
+                4A[i] .* (δ⁻[i] * E[i, i])
+            else
+                (σ⁻[i] * (σ⁺[j] * A[j])) .* (δ⁺[j] * E[i, j])
+            end
         end
     end
 end
