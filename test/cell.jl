@@ -41,11 +41,11 @@ L̂ = divergence(ops, Â, Ĝ)
 using SparseArrays
 
 Ĵ = sparse(Symbolics.jacobian(L̂, T))
-A = eval(first(build_function(Ĵ)))()
+M = eval(first(build_function(Ĵ)))()
 
 T̂ = rand(prod(n))
 
-b̂₁ = A * T̂
+b̂₁ = M * T̂
 b̂₂ = eval(first(build_function(L̂, T)))(T̂)
 
 using LinearAlgebra
@@ -57,6 +57,7 @@ Unsteady heat conduction on a square
 (homogeneous B.C. is non-periodic).
 
 =#
+#=
 @variables t p
 (rhs, rhs!) = build_function(L̂, T, p, t)
 
@@ -71,3 +72,4 @@ using Plots
 
 heatmap(reshape(sol(0.1), n...))
 
+=#

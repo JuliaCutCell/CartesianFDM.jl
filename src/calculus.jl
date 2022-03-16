@@ -110,3 +110,10 @@ function divergence2(ops, A, E)
     end
 end
 
+function dissipation(ops, A, V, T)
+    ((δ⁻, δ⁺), (σ⁻, σ⁺)) = getproperty.(Ref(ops), (:δ, :σ))
+    mapreduce(+, eachindex(A)) do i
+        -(σ⁺[i] * ((δ⁻[i] * ((σ⁺[i] * A[i]) .* T)) .^ 2 ./ (σ⁻[i] * V)))
+    end
+end
+
