@@ -1,6 +1,8 @@
 using CartesianFDM
+using LinearAlgebra
+using SparseArrays
 
-n = (8, 9)
+n = (9, 8)
 bc = (dirichlet(), periodic())
 
 ops = fdmoperators(bc, n)
@@ -21,7 +23,31 @@ D = ones(Float64, prod(n))
 G = gradient(ops, A, V, T, D)
 L = divergence(ops, A, G)
 
-#
+### potential flow
+Φ = scalar(:Φ, n)
+
+# dirichlet = true
+bc = [reshape([i > n[1] - 5 for i in 1:n[1], j in 1:n[2]], :),
+      ones(Bool, prod(n))]
+U = gradient(ops, bc, A, V, Φ, 0)
+Δ = divergence(ops, bc, A, U, -1)
+
+(potential, _) = build_function(Δ, Φ)
+J = Symbolics.jacobian(Δ, Φ)
+
+phi = rand(prod(n))
+res1 = eval(potential)(phi)
+res2 = J * phi + eval(potential)(zeros(prod(n)))
+
+@assert norm(res1 - res2) < 1e-14
+
+for i in LinearIndices(CartesianIndices(n))[end, :]
+    J[i, i] = -8.
+end
+
+phi = (-J) \ eval(potential)(zeros(prod(n)))
+
+#=
 @variables t p
 (rhs, rhs!) = build_function(L, T, p, t)
 
@@ -35,6 +61,7 @@ sol = solve(prob)
 using Plots
 
 heatmap(reshape(sol(0.1), n...))
+=#
 
 ### Step 1 -- thermal flow
 #

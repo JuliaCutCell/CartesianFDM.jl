@@ -39,6 +39,21 @@ function gradient(ops, A, V, H, T, N)
 end
 
 """
+    gradient(ops, bc, A, V, T, D)
+
+Compute the gradient of T.
+
+"""
+function gradient(ops, bc, A, V, T, D)
+    ((δ⁻, δ⁺), (σ⁻, σ⁺)) = getproperty.(Ref(ops), (:δ, :σ))
+    map(eachindex(A)) do i
+        ((δ⁻[i] * ((σ⁺[i] * A[i]) .* T)) .-
+         (σ⁻[i] * ((δ⁺[i] * A[i]) .* ((bc[i] .* D) .+ ((!).(bc[i]) .* T))))) ./
+        (σ⁻[i] * V)
+    end
+end
+
+"""
     divergence(ops, A, U)
 
 Compute the volume-weighted divergence of U with Dirichlet boundary conditions.
@@ -58,11 +73,27 @@ end
 
 Compute the volume-weighted divergence of U with Neumann boundary conditions.
 
+!!! note "Factor 2!"
+
 """
 function divergence(ops, A, U, W)
     (_, δ⁺) = getproperty(ops, :δ)
     mapreduce(+, eachindex(U)) do i
-        (δ⁺[i] * (A[i] .* U[i])) .- (δ⁺[i] * A[i]) .* W
+        (2δ⁺[i] * (A[i] .* U[i])) .- ((2δ⁺[i] * A[i]) .* W)
+    end
+end
+
+"""
+    divergence(ops, bc, A, U, W)
+
+!!! note "Factor 2!"
+
+"""
+function divergence(ops, bc, A, U, W)
+    ((_, δ⁺), (_, σ⁺)) = getproperty.(Ref(ops), (:δ, :σ))
+    mapreduce(+, eachindex(A)) do i
+        (2δ⁺[i] * (A[i] .* U[i])) .-
+        ((δ⁺[i] * A[i]) .* ((bc[i] .* (σ⁺[i] * U[i])) .+ ((!).(bc[i]) .* 2W)))
     end
 end
 
