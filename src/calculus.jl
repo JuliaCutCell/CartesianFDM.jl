@@ -13,12 +13,28 @@ function mask(ops, A::Union{TupleN{T},AbstractVector{T}}) where {T<:AbstractVect
 end
 
 """
+    permanent(ops, Φ, Ψ)
+
+!!! note "Factor 2!"
+
+
+"""
+function permanent(ops, Φ, Ψ)
+    (τ⁻, τ⁺) = getproperty(ops, :τ)
+    map(getproperty(ops, :τ)) do iter
+        map(iter) do el
+            ((el * Φ) .* Ψ) .+ (Φ .* (el * Ψ))
+        end
+    end
+end
+
+"""
     gradient(ops, A, V, T, D)
 
 Compute the gradient of T with Dirichlet boundary condition D.
 
 """
-function gradient(ops, A, V, T, D)
+function gradient(::Dirichlet, ops, A, V, T, D)
     ((δ⁻, δ⁺), (σ⁻, σ⁺)) = getproperty.(Ref(ops), (:δ, :σ))
     map(eachindex(A)) do i
         ((δ⁻[i] * ((σ⁺[i] * A[i]) .* T)) .- (σ⁻[i] * ((δ⁺[i] * A[i]) .* D))) ./ (σ⁻[i] * V)
@@ -31,7 +47,7 @@ end
 Compute the gradient of T with Neumann boundary condition N.
 
 """
-function gradient(ops, A, V, H, T, N)
+function gradient(::Neumann, ops, A, V, H, T, N)
     ((δ⁻, δ⁺), (σ⁻, _)) = getproperty.(Ref(ops), (:δ, :σ))
     map(eachindex(A)) do i
         (A[i] .* (δ⁻[i] * T) - (σ⁻[i] * ((δ⁺[i] * A[i]) .* H .* N))) ./ (σ⁻[i] * V)
@@ -44,11 +60,12 @@ end
 Compute the gradient of T.
 
 """
-function gradient(ops, bc, A, V, T, D)
+#function gradient(ops, bc, A, V, T, D)
+function gradient((; info)::Mixed, ops, A, V, H, T, D, N)
     ((δ⁻, δ⁺), (σ⁻, σ⁺)) = getproperty.(Ref(ops), (:δ, :σ))
     map(eachindex(A)) do i
         ((δ⁻[i] * ((σ⁺[i] * A[i]) .* T)) .-
-         (σ⁻[i] * ((δ⁺[i] * A[i]) .* ((bc[i] .* D) .+ ((!).(bc[i]) .* T))))) ./
+         (σ⁻[i] * ((δ⁺[i] * A[i]) .* ((info[i] .* D) .+ ((!).(info[i]) .* (T .+ (H .* N))))))) ./
         (σ⁻[i] * V)
     end
 end
@@ -61,7 +78,7 @@ Compute the volume-weighted divergence of U with Dirichlet boundary conditions.
 !!! note "Factor 2!"
 
 """
-function divergence(ops, A, U)
+function divergence(::Dirichlet, ops, A, U)
     ((_, δ⁺), (_, σ⁺)) = getproperty.(Ref(ops), (:δ, :σ))
     mapreduce(+, eachindex(U)) do i
         (σ⁺[i] * A[i]) .* (δ⁺[i] * U[i])
@@ -76,7 +93,7 @@ Compute the volume-weighted divergence of U with Neumann boundary conditions.
 !!! note "Factor 2!"
 
 """
-function divergence(ops, A, U, W)
+function divergence(::Neumann, ops, A, U, W)
     (_, δ⁺) = getproperty(ops, :δ)
     mapreduce(+, eachindex(U)) do i
         (2δ⁺[i] * (A[i] .* U[i])) .- ((2δ⁺[i] * A[i]) .* W)
@@ -89,11 +106,11 @@ end
 !!! note "Factor 2!"
 
 """
-function divergence(ops, bc, A, U, W)
+function divergence((; info)::Mixed, ops, A, U, W)
     ((_, δ⁺), (_, σ⁺)) = getproperty.(Ref(ops), (:δ, :σ))
     mapreduce(+, eachindex(A)) do i
         (2δ⁺[i] * (A[i] .* U[i])) .-
-        ((δ⁺[i] * A[i]) .* ((bc[i] .* (σ⁺[i] * U[i])) .+ ((!).(bc[i]) .* 2W)))
+        ((δ⁺[i] * A[i]) .* ((info[i] .* (σ⁺[i] * U[i])) .+ ((!).(info[i]) .* 2W)))
     end
 end
 

@@ -3,9 +3,9 @@ using LinearAlgebra
 using SparseArrays
 
 n = (9, 8)
-bc = (dirichlet(), periodic())
+topo = (nonperiodic(), periodic())
 
-ops = fdmoperators(bc, n)
+ops = fdmoperators(topo, n)
 
 # metrics
 V = map(mask(ops, ones(Float64, prod(n)))) do x
@@ -15,37 +15,62 @@ A = mask(ops, ntuple(length(n)) do i
                   ones(Bool, prod(n))
               end)
 
+#=
+using JLD
+
+data = load("particle.jld")
+V = data["V"]
+A = data["A"]
+=#
+
 # primary
 T = scalar(:T, n)
 D = ones(Float64, prod(n))
 
 # secondary
-G = gradient(ops, A, V, T, D)
-L = divergence(ops, A, G)
+G = gradient(dir, ops, A, V, T, D)
+L = divergence(dir, ops, A, G)
 
 ### potential flow
 Φ = scalar(:Φ, n)
 
 # dirichlet = true
-bc = [reshape([i > n[1] - 5 for i in 1:n[1], j in 1:n[2]], :),
-      ones(Bool, prod(n))]
-U = gradient(ops, bc, A, V, Φ, 0)
-Δ = divergence(ops, bc, A, U, -1)
-
-(potential, _) = build_function(Δ, Φ)
-J = Symbolics.jacobian(Δ, Φ)
-
-phi = rand(prod(n))
-res1 = eval(potential)(phi)
-res2 = J * phi + eval(potential)(zeros(prod(n)))
-
-@assert norm(res1 - res2) < 1e-14
-
-for i in LinearIndices(CartesianIndices(n))[end, :]
-    J[i, i] = -8.
+bc = Mixed([reshape([i > n[1] - 5 for i in 1:n[1], j in 1:n[2]], :),
+            ones(Bool, prod(n))])
+U = gradient(bc, ops, A, V, 1, Φ, 0, -1)
+Δ = map(enumerate(divergence(bc, ops, A, U, 1))) do (i, el)
+    iszero(el) ? -8Φ[i] : el
 end
 
+potential = eval(first(build_function(Δ, Φ)))
+
+using NLsolve
+
+sol = nlsolve(zeros(prod(n))) do res, Φ
+    res .= potential(Φ)
+end
+phi = getproperty(sol, :zero)
+
+#J = Symbolics.jacobian(Δ, Φ)
+#J = eval(first(build_function(sparse(Symbolics.jacobian(Δ, Φ)))))()
+
+#phi = rand(prod(n))
+#res1 = eval(potential)(phi)
+#res2 = J * phi + eval(potential)(zeros(prod(n)))
+
+#@assert norm(res1 - res2) < 1e-14
+
+# also in CYLINDER!
+#=
+vec = diag(J)
+broadcast!(vec, vec) do x
+    iszero(x) ? -8one(x) : zero(x)
+end
+
+J .+= vec
+
 phi = (-J) \ eval(potential)(zeros(prod(n)))
+=#
 
 #=
 @variables t p
