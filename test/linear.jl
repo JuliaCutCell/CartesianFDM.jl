@@ -2,39 +2,37 @@ using CartesianFDM
 using LinearAlgebra
 using SparseArrays
 
-n = (33, 33)
-top = ntuple(nonperiodic, length(n))
+n = (33, 32)
+top = (nonperiodic(), periodic())
 
 ops = fdmoperators(top, n)
+(τ⁻, τ⁺) = getproperty(ops, :τ)
 
+###
 X = scalar(:X, n)
 
 ###
-foo = Dict{Int,typeof(X)}()
+F = rand(prod(n)) .* X
 
 for i in eachindex(top)
-    p = prod(n[1:i-1])
-    m = prod(n) - p
-    foo[-p] = rand(m)
+    F .+= τ⁻[i] * (rand(prod(n)) .* X)
 end
-
-foo[0] = rand(prod(n))
 
 for i in eachindex(top)
-    p = prod(n[1:i-1])
-    m = prod(n) - p
-    foo[+p] = rand(m)
+    F .+= τ⁺[i] * (rand(prod(n)) .* X)
 end
 
-bar = spdiagm(foo...)
+###
+sym = linearize(star, top, n, ops, F, X)
+
+num = Dict{Int,Vector{Float64}}()
+
+for (key, val) in sym
+    num[key] = eval(first(build_function(val)))()
+end
+
+bar = spdiagm(num...)
 
 ###
-F = bar * X
-
-foo = linearize(star, top, n, ops, F, X)
-
-baz = eval(first(build_function(bar)))()
-
-###
-@assert all(iszero, F .- baz * X)
+@assert all(iszero, F .- bar * X)
 
