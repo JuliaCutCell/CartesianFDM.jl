@@ -22,7 +22,7 @@ export Mixed
 
 export star
 
-export FDMOperators, fdmoperators
+export CartesianFDMContext, cartesianfdmcontext
 
 export mask, gradient, divergence, strainrate, divergence2, dissipation, permanent
 

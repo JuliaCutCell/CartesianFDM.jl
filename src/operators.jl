@@ -1,4 +1,6 @@
-struct FDMOperators{N,R,T,D,S,M}
+struct CartesianFDMContext{N,P,R,T,D,S,M}
+    top::P
+    n::NTuple{N,Int}
     ρ::R
     τ::NTuple{2,NTuple{N,T}}
     δ::NTuple{2,NTuple{N,D}}
@@ -6,13 +8,13 @@ struct FDMOperators{N,R,T,D,S,M}
     μ::Tuple{M,NTuple{N,M}}
 end
 
-function fdmoperators(topo, n)
+function cartesianfdmcontext(top, n)
     ρ = spdiagm(0 => ones(Bool, prod(n)))
-    τ = backwardshiftmatrices(topo, n), forwardshiftmatrices(topo, n)
+    τ = backwardshiftmatrices(top, n), forwardshiftmatrices(top, n)
     δ = Ref(ρ) .- τ[1], τ[2] .- Ref(ρ)
     σ = Ref(ρ) .+ τ[1], τ[2] .+ Ref(ρ)
-    μ = maskmatrices(topo, n)
-    FDMOperators(ρ, τ, δ, σ, μ)
+    μ = maskmatrices(top, n)
+    CartesianFDMContext(top, n, ρ, τ, δ, σ, μ)
 end
 
 """
@@ -36,8 +38,8 @@ _kron(opn::NTuple{3}, eye::NTuple{3}) =
 """
 
 """
-function forwardshiftmatrices(topo, n)
-    opn = _forwardshift.(topo, n)
+function forwardshiftmatrices(top, n)
+    opn = _forwardshift.(top, n)
     eye = I.(n)
     _kron(opn, eye)
 end
@@ -52,8 +54,8 @@ _forwardshift(::Periodic, n::Int) =
 """
 
 """
-function backwardshiftmatrices(topo, n)
-    opn = _backwardshift.(topo, n)
+function backwardshiftmatrices(top, n)
+    opn = _backwardshift.(top, n)
     eye = I.(n)
     _kron(opn, eye)
 end
@@ -68,12 +70,12 @@ _backwardshift(::Periodic, n::Int) =
 """
 
 """
-function maskmatrices(topo, n)
-    opn = _mask.(topo, n)
+function maskmatrices(top, n)
+    opn = _mask.(top, n)
     μ⁰ = _kron(opn...)
 
-    opn = _normal.(topo, n)
-    eye = _tangent.(topo, n)
+    opn = _normal.(top, n)
+    eye = _tangent.(top, n)
     μ¹ = _kron(opn, eye)
 
     μ⁰, μ¹

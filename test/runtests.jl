@@ -3,14 +3,14 @@ using Test
 
 @testset "1D identities" begin
     n = (5,)
-    bc = (periodic(),)
+    top = (periodic(),)
 
-    ops = fdmoperators(bc, n)
+    ctx = cartesianfdmcontext(top, n)
 
     # assumes 1D
-    ((δ⁻,), (δ⁺,)) = getproperty(ops, :δ)
-    ((σ⁻,), (σ⁺,)) = getproperty(ops, :σ)
-    ((τ⁻,), (τ⁺,)) = getproperty(ops, :τ)
+    ((δ⁻,), (δ⁺,)) = getproperty(ctx, :δ)
+    ((σ⁻,), (σ⁺,)) = getproperty(ctx, :σ)
+    ((τ⁻,), (τ⁺,)) = getproperty(ctx, :τ)
 
     Ψ, Φ = scalar(:Ψ, n), scalar(:Φ, n)
 
@@ -47,5 +47,39 @@ using Test
         id = (((σ⁻ * Ψ) .* (δ⁻ * Φ)) .+ ((σ⁻ * Φ) .* (δ⁻ * Ψ))) - (2δ⁻ * (Ψ .* Φ))
         @test all(iszero, expand.(id))
     end
+end
+
+@testset "star stencil" begin
+    using SparseArrays
+
+    n = (3, 4, 5)
+    top = (periodic(), nonperiodic(), periodic())
+
+    ctx = cartesianfdmcontext(top, n)
+    (τ⁻, τ⁺) = getproperty(ctx, :τ)
+
+    X = scalar(:X, n)
+
+    ###
+    F = rand(prod(n)) .* X
+    for i in eachindex(top)
+        F .+= τ⁻[i] * (rand(prod(n)) .* X)
+    end
+    for i in eachindex(top)
+        F .+= τ⁺[i] * (rand(prod(n)) .* X)
+    end
+
+    ###
+    sym = linearize(star, ctx, F, X)
+
+    num = Dict{Int,Vector{Float64}}()
+    for (key, val) in sym
+        num[key] = eval(first(build_function(val)))()
+    end
+
+    A = spdiagm(num...)
+
+    ###
+    @test all(iszero, F .- A * X)
 end
 
