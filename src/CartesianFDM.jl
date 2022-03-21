@@ -28,6 +28,8 @@ export mask, gradient, divergence, strainrate, divergence2, dissipation, permane
 
 export linearize
 
+export spacing, coordinate
+
 include("symbolics.jl")
 include("topology.jl")
 include("boundary.jl")
@@ -35,5 +37,6 @@ include("stencil.jl")
 include("operators.jl")
 include("calculus.jl")
 include("linearization.jl")
+include("meshing.jl")
 
 end
