@@ -50,7 +50,20 @@ Compute the gradient of T with Neumann boundary condition N.
 function gradient(::Neumann, ctx, A, V, H, T, N)
     ((δ⁻, δ⁺), (σ⁻, _)) = getproperty.(Ref(ctx), (:δ, :σ))
     map(eachindex(A)) do i
-        (A[i] .* (δ⁻[i] * T) - (σ⁻[i] * ((δ⁺[i] * A[i]) .* H .* N))) ./ (σ⁻[i] * V)
+        (2A[i] .* (δ⁻[i] * T) - (σ⁻[i] * ((δ⁺[i] * A[i]) .* H .* N))) ./ (σ⁻[i] * V)
+    end
+end
+
+"""
+    gradient(ctx, A, V, H, T, N)
+
+Compute (twice) the volume-weighted gradient of T with Neumann boundary condition N.
+
+"""
+function gradient(::Neumann, ctx, A, H, T, N)
+    ((δ⁻, δ⁺), (σ⁻, _)) = getproperty.(Ref(ctx), (:δ, :σ))
+    map(eachindex(A)) do i
+        (2A[i] .* (δ⁻[i] * T) - (σ⁻[i] * ((δ⁺[i] * A[i]) .* H .* N)))
     end
 end
 
@@ -86,7 +99,7 @@ function divergence(::Dirichlet, ctx, A, U)
 end
 
 """
-    divergence(ctx, A, U, W)
+    divergence(bc, ctx, A, U, W)
 
 Compute the volume-weighted divergence of U with Neumann boundary conditions.
 
@@ -123,7 +136,7 @@ end
     Also, Dirichlet.
 
 """
-function strainrate(ctx, A, V, U, W)
+function strainrate(::Dirichlet, ctx, A, V, U, W)
     ((δ⁻, δ⁺), (σ⁻, σ⁺)) = getproperty.(Ref(ctx), (:δ, :σ))
     map(product(eachindex(A), eachindex(A))) do (i, j)
         if i == j
@@ -138,14 +151,14 @@ function strainrate(ctx, A, V, U, W)
 end
 
 """
-    divergence2(ctx, A, E)
+    divergence(ctx, A, E)
 
 !!! note
 
     Also, Dirichlet.
 
 """
-function divergence2(ctx, A, E)
+function divergence(::Dirichlet, ctx, A, E::AbstractMatrix)
     ((δ⁻, δ⁺), (σ⁻, σ⁺)) = getproperty.(Ref(ctx), (:δ, :σ))
     map(eachindex(A)) do i
         mapreduce(+, eachindex(A)) do j
