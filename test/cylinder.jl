@@ -1,4 +1,5 @@
-using Revise
+#using Revise
+using LinearAlgebra
 using CartesianFDM
 
 n = (17, 16)
@@ -88,7 +89,64 @@ end
     all(≤(100eps(1.)), B₁-B₂')
 end
 
-# visc =
+Re = 10.
+
+mom = grad ./ 2 .+ visc ./ 8Re
+rhs = vcat(mom..., cont ./ 2)
+var = vcat(U..., P)
+
+filename = "stokes.jl"
+(fun, fun!) = build_function(rhs, var)
+open(filename, "w") do file
+    write(file, string(fun))
+    write(file, "\n")
+    write(file, string(fun!))
+end
+#include("model.jl")
+
+(σ⁻, _) = getproperty(ctx, :σ)
+
+Mᵥ = map(σ⁻) do σ
+    σ * V / 2
+end
+
+reshape(Mᵥ[2], n...)[n[1], :] .= prod(h)
+
+Mₚ = map(cont) do el
+    iszero(el) ? prod(h) : zero(first(h))
+end
+
+M = Diagonal(vcat(Mᵥ..., Mₚ))
+
+diffvar = (!iszero).(vcat(Mᵥ..., Mₚ))
+
+using DifferentialEquations
+
+u₀ = zeros((length(n)+1)*prod(n))
+du₀ = zero(u₀)
+tspan = (0.0, 1.0)
+
+### option 2
+#=
+function dae(out, du, u, M, t)
+    stokes!(out, u, nothing, t)
+    out .= out - M * du
+    nothing
+end
+
+prob = DAEProblem(dae, du₀, u₀, tspan, M, differential_vars=diffvar)
+
+using Sundials
+sol = solve(prob,IDA())
+=#
+
+### option 1
+#=
+f = ODEFunction(stokes!, mass_matrix=M)
+prob = ODEProblem(f, x₀, tspan)
+
+sol = solve(prob, Rodas5(), reltol=1e-8, abstol=1e-8)
+=#
 
 # test divergence
 #=
@@ -97,6 +155,7 @@ V̂ = map(mask(ctx, fill(prod(h), prod(n)))) do x
 end
 =#
 
+#=
 val = map(eachindex(h)) do i
     prod(h[j] for j in eachindex(h) if j ≠ i)
 end
@@ -109,6 +168,7 @@ Û = [ones(prod(n)), zeros(prod(n))]
 @assert all(iszero, divergence(neu, ctx, Â, Û, Ŵ))
 foo = divergence(neu, ctx, mask(ctx, vector(:A, n)), Û, 0)
 bar = divergence(neu, ctx, mask(ctx, vector(:A, n)), 0, Ŵ)
+=#
 #=
 W =
 =#
