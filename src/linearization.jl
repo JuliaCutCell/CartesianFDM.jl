@@ -1,7 +1,7 @@
 import Symbolics: derivative
 
-function linearize(::Star, ops, F, X)
-    top, n, (τ⁻, τ⁺) = getproperty.(Ref(ops), (:top, :n, :τ))
+function linearize(::Star, ctx, F, X)
+    top, n, (τ⁻, τ⁺) = getproperty.(Ref(ctx), (:top, :n, :τ))
 
     T = promote_type(typeof(F), typeof(X))
     diags = Dict{Int,T}()

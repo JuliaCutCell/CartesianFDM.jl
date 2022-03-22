@@ -46,6 +46,10 @@ end
 
 Compute the gradient of T with Neumann boundary condition N.
 
+!!! note
+
+    Would it make sense to let N be a cell-centered vector-valued field?
+
 """
 function gradient(::Neumann, ctx, A, V, H, T, N)
     ((δ⁻, δ⁺), (σ⁻, _)) = getproperty.(Ref(ctx), (:δ, :σ))
@@ -104,6 +108,10 @@ end
 Compute the volume-weighted divergence of U with Neumann boundary conditions.
 
 !!! note "Factor 2!"
+
+!!! warning
+
+    It would make a lot of sense to let W be a cell-centered vector-valued field.
 
 """
 function divergence(::Neumann, ctx, A, U, W)

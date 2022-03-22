@@ -30,6 +30,8 @@ export linearize
 
 export spacing, coordinate
 
+export potentialflow
+
 include("symbolics.jl")
 include("topology.jl")
 include("boundary.jl")
@@ -37,6 +39,7 @@ include("stencil.jl")
 include("operators.jl")
 include("calculus.jl")
 include("linearization.jl")
-include("meshing.jl")
+include("mesh.jl")
+include("flow.jl")
 
 end
