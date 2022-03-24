@@ -1,5 +1,6 @@
 #using Revise
 using LinearAlgebra
+using SparseArrays
 using CartesianFDM
 
 n = (17, 16)
@@ -89,28 +90,19 @@ end
     all(≤(100eps(1.)), B₁-B₂')
 end
 
-Re = 10.
+# initialization
+_, ∇Φ = potentialflow(ctx, A, V, N)
 
-mom = grad ./ 2 .+ visc ./ 8Re
-rhs = vcat(mom..., cont ./ 2)
-var = vcat(U..., P)
-
-filename = "stokes.jl"
-(fun, fun!) = build_function(rhs, var)
-open(filename, "w") do file
-    write(file, string(fun))
-    write(file, "\n")
-    write(file, string(fun!))
-end
-#include("model.jl")
-
+# mass matrix
 (σ⁻, _) = getproperty(ctx, :σ)
 
-Mᵥ = map(σ⁻) do σ
-    σ * V / 2
+Mᵥ = map(eachindex(σ⁻)) do i
+    M = σ⁻[i] * V / 2
+    map(M) do el
+        abs(el) ≤ 100eps(1.0) ? prod(h) : el
+    end
 end
-
-reshape(Mᵥ[2], n...)[n[1], :] .= prod(h)
+#reshape(Mᵥ[2], n...)[n[1], :] .= prod(h)
 
 Mₚ = map(cont) do el
     iszero(el) ? prod(h) : zero(first(h))
@@ -118,35 +110,111 @@ end
 
 M = Diagonal(vcat(Mᵥ..., Mₚ))
 
-diffvar = (!iszero).(vcat(Mᵥ..., Mₚ))
+Re = 10.
+coupled = false
 
-using DifferentialEquations
+if coupled
+    mom = grad ./ 2 .+ visc ./ 8Re
+    rhs = vcat(mom..., cont ./ 2)
+    var = vcat(U..., P)
 
-u₀ = zeros((length(n)+1)*prod(n))
-du₀ = zero(u₀)
-tspan = (0.0, 1.0)
+    filename = "stokes.jl"
+    #(fun, fun!) = build_function(rhs, var)
+    #open(filename, "w") do file
+    #    write(file, string(fun))
+    #    write(file, "\n")
+    #    write(file, string(fun!))
+    #end
+    include(filename)
 
-### option 2
-#=
-function dae(out, du, u, M, t)
-    stokes!(out, u, nothing, t)
-    out .= out - M * du
-    nothing
+    using DifferentialEquations
+
+    u₀ = vcat(∇Φ..., zeros(prod(n)))
+    du₀ = zero(u₀)
+    tspan = (0.0, 1.0)
+
+    ### option 2
+    diffvar = (!iszero).(vcat(Mᵥ..., Mₚ))
+
+    function dae(out, du, u, M, t)
+        stokes!(out, u, nothing, t)
+        out .= out - M * du
+        nothing
+    end
+
+    prob = DAEProblem(dae, du₀, u₀, tspan, M, differential_vars=diffvar)
+
+    using Sundials
+
+    integrator = init(prob, IDA())
+    sol = step!(integrator)
+
+    ### option 1
+    f = ODEFunction(stokes!, mass_matrix=M)
+    prob = ODEProblem(f, u₀, tspan)
+
+    integrator=init(prob, Rodas5(), reltol=1e-3, abstol=1e-3)
+    step!(integrator)
 end
 
-prob = DAEProblem(dae, du₀, u₀, tspan, M, differential_vars=diffvar)
+# pressure projection
+#    mom = grad ./ 2 .+ visc ./ 8Re
+τ = 0.001
+mom = visc ./ 8Re
 
-using Sundials
-sol = solve(prob,IDA())
-=#
+## setup
+### prediction
+M = vcat(Mᵥ...)
 
-### option 1
+J = Symbolics.jacobian(vcat(mom...), vcat(U...)) 
+
+mat = zeros(2prod(n), 2prod(n))
+broadcast!(mat, J) do el
+    Float64(el.val)
+end
+mat = Diagonal(M) .- τ .* sparse(mat)
+
+### projection
+#u^n+1 = u⋆ - ∇(τP)
+#∇⋅u⋆ = Δ(τP)
+
+∇P = gradient(neu, ctx, A, 0, P, 0)
+∇P = map(Mᵥ, ∇P) do M, G
+    G ./ M
+end
+ΔP = divergence(neu, ctx, A, ∇P, 0)
+
+J = Symbolics.jacobian(ΔP, P) 
+
+lap = zeros(prod(n), prod(n))
+broadcast!(lap, J) do el
+    Float64(el.val)
+end
+lap = sparse(lap)
+
 #=
-f = ODEFunction(stokes!, mass_matrix=M)
-prob = ODEProblem(f, x₀, tspan)
+niter = 100
 
-sol = solve(prob, Rodas5(), reltol=1e-8, abstol=1e-8)
+sol = vcat(∇Φ...)
+for k in 1:niter
+    E₀ = strainrate(dir, ctx, A, V, sol, W)
+    visc₀ = vcat(divergence(dir, ctx, A, E₀)...)
+
+    b = τ .* visc₀ ./ 8Re
+    sol .+= mat \ b
+
+    m = prod(n)
+
+    # poisson
+    rhs = divergence(neu, ctx, A, [sol[1:m], sol[1+m:2m]], N)
+grad = -gradient(neu, ctx, A, 0, P, 0)
+end
+
+using Plots
+
+heatmap(reshape(sol[1:prod(n)], n...))
 =#
+
 
 # test divergence
 #=

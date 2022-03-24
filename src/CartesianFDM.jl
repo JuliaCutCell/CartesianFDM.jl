@@ -8,7 +8,7 @@ using SparseArrays
 using Reexport
 @reexport using Symbolics
 
-const subscripts = ("\u2081", "\u2082", "\u2083")
+const subscripts = ('\u2081', '\u2082', '\u2083')
 const TupleN{T,N} = NTuple{N,T}
 
 export scalar, vector
@@ -24,6 +24,8 @@ export star
 
 export CartesianFDMContext, cartesianfdmcontext
 
+export CartesianCapacities, cartesiancapacities
+
 export mask, gradient, divergence, strainrate, divergence2, dissipation, permanent
 
 export linearize
@@ -37,6 +39,7 @@ include("topology.jl")
 include("boundary.jl")
 include("stencil.jl")
 include("operators.jl")
+include("capacities.jl")
 include("calculus.jl")
 include("linearization.jl")
 include("mesh.jl")

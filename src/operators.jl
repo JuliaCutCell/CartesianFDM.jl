@@ -1,3 +1,4 @@
+# CartesianOperators
 struct CartesianFDMContext{N,P,R,T,D,S,M}
     top::P
     n::NTuple{N,Int}
