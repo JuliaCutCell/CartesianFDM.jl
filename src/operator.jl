@@ -14,9 +14,9 @@ end
 
 function (*)(mat::Operator, vec::Field)
     (; dir, forward, backward) = mat
-    (; tag, data) = vec
-    Field(flip(tag, dir),
-          tag[dir] ? forward * data : backward * data)
+    (; data, tag) = vec
+    Field(tag[dir] ? forward * data : backward * data,
+          flip(tag, dir))
 end
 
 struct CenteredOperators{N,D,S}

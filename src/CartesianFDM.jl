@@ -20,6 +20,7 @@ export scalar, vector
 
 export Periodic, periodic
 export NonPeriodic, nonperiodic
+#export cell, face
 
 export Field
 export scalarfield, vectorfield
