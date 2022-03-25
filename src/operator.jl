@@ -1,62 +1,61 @@
 # MonoDir
 # Nonlocal
-struct Univariate{D,F,B,O} <: Function
+"""
+
+1. Nonlocal ;
+1. Single argument (univariate) ;
+1. Unidimensional.
+
+"""
+struct NonLocalOperator{D,S,T,F} <: Function
     dim::D
-    forward::F
-    backward::B
-    fn::O
+    forward::S
+    backward::T
+    f::F
 end
 
-function (op::Univariate)(x::Field)
-    (; dim, forward, backward, fn) = op
+function (op::NonLocalOperator)(x::TaggedVector)
+    (; dim, forward, backward, f) = op
     (; data, tag) = x
 
     res = tag[dim] ?
-        fn.((*).(forward, Ref(data))...) :
-        fn.((*).(backward, Ref(data))...)
+        f.(broadcast.(forward, ntuple(i -> Ref(data), length(forward)))...) :
+        f.(broadcast.(backward, ntuple(i -> Ref(data), length(backward)))...)
 
-    Field(res, flip(tag, dim))
+    TaggedVector(res, flip(tag, dim))
 end
 
-univariates(dims, eye, τ⁺, τ⁻, fn) =
-    map(dims, τ⁺, τ⁻) do d, plus, minus
-        Univariate(d, (eye, plus), (minus, eye), fn)
-    end
-
-# LocalOperator
-# Can this be generalized to do upwinding?
-struct Composite{S,O} <: Function
+# Can this do upwinding?
+struct CompositeOperator{S,F} <: Function
     sub::S
-    fn::O
+    f::F
 end
 
-function (op::Composite)(xs::Field...)
-    (; sub, fn) = op
+function (op::CompositeOperator)(xs::TaggedVector...)
+    (; sub, f) = op
 
-    ys = broadcast(sub, xs) do s, x
-        s(x)
-    end
+    ys = broadcast.(sub, Ref.(xs))
 
-    tags = getproperty.(ys, Ref(:tag))
-    @assert all(==(first(tags)), Base.tail(tags))
-
-    Field(fn.(ys...), first(tags))
+    TaggedVector(f.(ys...), tag(ys...))
 end
 
 permanent((x⁻, x⁺), (y⁻, y⁺)) = x⁻ * y⁺ + y⁻ * x⁺
 
-function operators(top, n)
-    dims = ntuple(identity, length(top))
-    eye = I(prod(n))
-    τ⁺ = forwardshiftmatrices(top, n)
-    τ⁻ = backwardshiftmatrices(top, n)
+_tobinary(dim, eye, plus, minus, f) =
+    NonLocalOperator(dim, (eye, plus), (minus, eye), f)
 
-    θ = univariates(dims, eye, τ⁺, τ⁻, tuple)
-    δ = univariates(dims, eye, τ⁺, τ⁻, -)
-    σ = univariates(dims, eye, τ⁺, τ⁻, +)
+function nonlocaloperators(top, n)
+    dims = ntuple(identity, length(top))
+    eye = LinearMap(I(prod(n)))
+    τ⁺ = LinearMap.(forwardshiftmatrices(top, n))
+    τ⁻ = LinearMap.(backwardshiftmatrices(top, n))
+
+    θ = _tobinary.(dims, Ref(eye), τ⁺, τ⁻, Ref(tuple))
+    δ = _tobinary.(dims, Ref(eye), τ⁺, τ⁻, Ref(-))
+    σ = _tobinary.(dims, Ref(eye), τ⁺, τ⁻, Ref(+))
 
     ω = map(θ) do op
-        Composite((op, op), permanent)
+        CompositeOperator((op, op), permanent)
     end
 
     (; θ, δ, σ, ω)

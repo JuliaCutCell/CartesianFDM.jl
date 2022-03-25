@@ -1,6 +1,6 @@
 module CartesianFDM
 
-import Base: parent, size, getindex, setindex!, *
+import Base: parent, size, getindex, setindex!, showarg, +, -
 
 using Base.Iterators
 
@@ -11,7 +11,7 @@ using Reexport
 @reexport using Symbolics
 
 using StaticArrays
-import StaticArrays: sacollect
+#import StaticArrays: sacollect
 
 const subscripts = SVector('\u2081', '\u2082', '\u2083')
 const TupleN{T,N} = NTuple{N,T}
@@ -22,11 +22,12 @@ export Periodic, periodic
 export NonPeriodic, nonperiodic
 export cell, face
 
-export Field
+export TaggedVector
+
 export scalarfield, vectorfield
 export mask!
 
-export operators
+export nonlocaloperators
 #export CenteredOperators, centeredoperators
 
 export Dirichlet, dir
@@ -50,11 +51,13 @@ export potentialflow
 include("utils.jl")
 include("symbolics.jl")
 include("topology.jl")
+include("array.jl")
 include("field.jl")
 include("operator.jl")
 include("boundary.jl")
 include("stencil.jl")
 include("operators.jl")
+include("linear.jl")
 include("capacities.jl")
 include("calculus.jl")
 include("linearization.jl")

@@ -1,21 +1,32 @@
 using CartesianFDM
 
-n = (5,)
+n = (5, 5)
 top = ntuple(periodic, length(n))
 
 Φ = scalarfield(:Φ, n)
-Ψ = scalarfield(:Ψ, n, tag=face(1, n))
+Ψ = scalarfield(:Ψ, n)#, tag=face(1, n))
 
-(; θ, δ, σ, ω) = operators(top, n)
-(θ,), (δ,), (σ,), (ω,) = θ, δ, σ, ω
+(; θ, δ, σ, ω) = nonlocaloperators(top, n)
+#(θ,), (δ,), (σ,), (ω,) = θ, δ, σ, ω
 
+#=
 id = Φ .* (δ(Ψ .* σ(Φ)) .+ σ(Ψ .* δ(Φ))) .- δ(Ψ .* ω(Φ, Φ))
+=#
+
+#=
+findtaggedarrays(bc::Base.Broadcast.Broadcasted) = findtaggedarrays(bc.args...)
+findtaggedarrays(a::TaggedArray) = (a,)
+findtaggedarrays(a) = ()
+findtaggedarrays(x, xs...) = findtaggedarrays(x)..., findtaggedarrays(xs...)...
+=#
+
 
 """
 
 <https://docs.julialang.org/en/v1/manual/interfaces/#man-interfaces-broadcasting>
 
 """
+#=
 struct FieldStyle <: Broadcast.AbstractArrayStyle{1} end
 Base.BroadcastStyle(::Type{<:Field}) = FieldStyle()
 
@@ -36,6 +47,9 @@ find_fields(a::Any, rest...) = find_fields(rest...)
 find_fields() = ()
 
 σ(Ψ) .* Φ
+=#
+
+
 #=
 function find_field(a::Any, rest...)
     @show a, rest
