@@ -34,6 +34,7 @@ function Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{TaggedArray
 end
 
 findtaggedarrays(bc::Base.Broadcast.Broadcasted) = findtaggedarrays(bc.args...)
+findtaggedarrays(ext::Base.Broadcast.Extruded) = findtaggedarrays(ext.x)
 findtaggedarrays(a::TaggedArray) = (a,)
 findtaggedarrays(a) = ()
 findtaggedarrays(x, xs...) = findtaggedarrays(x)..., findtaggedarrays(xs...)...

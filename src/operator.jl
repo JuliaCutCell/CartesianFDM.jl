@@ -1,8 +1,6 @@
-# MonoDir
-# Nonlocal
 """
 
-1. Nonlocal ;
+1. Non-local ;
 1. Single argument (univariate) ;
 1. Unidimensional.
 
@@ -19,24 +17,23 @@ function (op::NonLocalOperator)(x::TaggedVector)
     (; data, tag) = x
 
     res = tag[dim] ?
-        f.(broadcast.(forward, ntuple(i -> Ref(data), length(forward)))...) :
-        f.(broadcast.(backward, ntuple(i -> Ref(data), length(backward)))...)
+        f.(broadcast.(forward, ntuple(_ -> Ref(data), length(forward)))...) :
+        f.(broadcast.(backward, ntuple(_ -> Ref(data), length(backward)))...)
 
     TaggedVector(res, flip(tag, dim))
 end
 
-# Can this do upwinding?
-struct CompositeOperator{S,F} <: Function
-    sub::S
+struct CompositeOperator{U,F} <: Function
+    unary::U
     f::F
 end
 
 function (op::CompositeOperator)(xs::TaggedVector...)
-    (; sub, f) = op
+    (; unary, f) = op
 
-    ys = broadcast.(sub, Ref.(xs))
+    ys = broadcast.(unary, Ref.(xs))
 
-    TaggedVector(f.(ys...), tag(ys...))
+    TaggedVector(f.(parent.(ys)...), tag(ys...))
 end
 
 permanent((x⁻, x⁺), (y⁻, y⁺)) = x⁻ * y⁺ + y⁻ * x⁺

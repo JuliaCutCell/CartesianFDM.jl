@@ -11,7 +11,7 @@ using Reexport
 @reexport using Symbolics
 
 using StaticArrays
-#import StaticArrays: sacollect
+import StaticArrays: sacollect
 
 const subscripts = SVector('\u2081', '\u2082', '\u2083')
 const TupleN{T,N} = NTuple{N,T}
@@ -27,6 +27,7 @@ export TaggedVector
 export scalarfield, vectorfield
 export mask!
 
+export NonLocalOperator, CompositeOperator
 export nonlocaloperators
 #export CenteredOperators, centeredoperators
 
