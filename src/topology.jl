@@ -9,8 +9,8 @@ nonperiodic(args...) = NonPeriodic()
 isperiodic(::Topology) = false
 isperiodic(::Periodic) = true
 
-flip(tag::NTuple{N}, i) where {N} =
-    ntuple(j -> j == i ? !tag[j] : tag[j], Val(N))
+flip(tag::NTuple{N}, dim) where {N} =
+    ntuple(i -> i == dim ? !tag[i] : tag[i], Val(N))
 
 cell(::NTuple{N}) where {N} = ntuple(i -> false, N)
 

@@ -1,4 +1,6 @@
-# TaggedVector
+# TaggedArray
+# Generalize this to TaggedArray{T,N}
+# No need to overspecify tag type
 struct Field{T,N,V<:AbstractVector{T}} <: AbstractVector{T}
     data::V
     tag::NTuple{N,Bool}
@@ -9,6 +11,7 @@ staggering(vec::Field) = vec.tag
 parent(vec::Field) = vec.data
 size(vec::Field) = size(parent(vec))
 getindex(vec::Field, i...) = getindex(parent(vec), i...)
+setindex!(vec::Field, val, i...) = setindex!(parent(vec), val, i...)
 
 none() = nothing
 none(::NTuple{N}) where {N} = ntuple(i -> nothing, N)

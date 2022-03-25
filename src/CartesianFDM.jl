@@ -1,6 +1,6 @@
 module CartesianFDM
 
-import Base: parent, size, getindex, *
+import Base: parent, size, getindex, setindex!, *
 
 using Base.Iterators
 
@@ -20,14 +20,14 @@ export scalar, vector
 
 export Periodic, periodic
 export NonPeriodic, nonperiodic
-#export cell, face
+export cell, face
 
 export Field
 export scalarfield, vectorfield
 export mask!
 
-export Operator
-export CenteredOperators, centeredoperators
+export operators
+#export CenteredOperators, centeredoperators
 
 export Dirichlet, dir
 export Neumann, neu
