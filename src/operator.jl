@@ -1,27 +1,47 @@
+uniswitch(i) = Base.Fix2(getindex, i)
+
+uniflip(i) = Base.Fix2(i) do x, j
+    ntuple(length(x)) do k
+        k == j ? !x[k] : x[k]
+    end
+end
+
+
 """
 
 1. Non-local ;
 1. Single argument (univariate) ;
-1. Unidimensional.
+1. Unidimensional (maybe not?).
+
+!!! note
+
+    Instead of `dim`, include a function to be applied to the tag.
+    Useful to generalize to multiple dimension?
 
 """
-struct NonLocalOperator{D,S,T,F} <: Function
-    dim::D
+struct StaggeredOperator{D,U,S,T,F} <: Function
+    switch::D
+    flip::U
     forward::S
     backward::T
     f::F
 end
 
-function (op::NonLocalOperator)(x::TaggedVector)
-    (; dim, forward, backward, f) = op
+function (op::StaggeredOperator)(x::TaggedVector)
+    (; switch, flip, forward, backward, f) = op
     (; data, tag) = x
 
-    res = tag[dim] ?
+    res = switch(tag) ?
         f.(broadcast.(forward, ntuple(_ -> Ref(data), length(forward)))...) :
         f.(broadcast.(backward, ntuple(_ -> Ref(data), length(backward)))...)
 
-    TaggedVector(res, flip(tag, dim))
+    TaggedVector(res, flip(tag))
 end
+
+#struct CenteredOperator{M,F} <: Function
+#    maps::M
+#    f::F
+#end
 
 struct CompositeOperator{U,F} <: Function
     unary::U
@@ -36,23 +56,30 @@ function (op::CompositeOperator)(xs::TaggedVector...)
     TaggedVector(f.(parent.(ys)...), tag(ys...))
 end
 
-permanent((x⁻, x⁺), (y⁻, y⁺)) = x⁻ * y⁺ + y⁻ * x⁺
+tilde((x⁻, x⁺), (y⁻, y⁺)) = x⁻ * y⁺ + y⁻ * x⁺
 
-_tobinary(dim, eye, plus, minus, f) =
-    NonLocalOperator(dim, (eye, plus), (minus, eye), f)
+unidim_bivar(dim, eye, plus, minus, f) =
+    StaggeredOperator(uniswitch(dim),
+                      uniflip(dim),
+                      (eye, plus),
+                      (minus, eye),
+                      f)
 
 function nonlocaloperators(top, n)
     dims = ntuple(identity, length(top))
+
     eye = LinearMap(I(prod(n)))
     τ⁺ = LinearMap.(forwardshiftmatrices(top, n))
     τ⁻ = LinearMap.(backwardshiftmatrices(top, n))
 
-    θ = _tobinary.(dims, Ref(eye), τ⁺, τ⁻, Ref(tuple))
-    δ = _tobinary.(dims, Ref(eye), τ⁺, τ⁻, Ref(-))
-    σ = _tobinary.(dims, Ref(eye), τ⁺, τ⁻, Ref(+))
+    # Staggered operators
+    θ = unidim_bivar.(dims, Ref(eye), τ⁺, τ⁻, Ref(SVector))
+    δ = unidim_bivar.(dims, Ref(eye), τ⁺, τ⁻, Ref(-))
+    σ = unidim_bivar.(dims, Ref(eye), τ⁺, τ⁻, Ref(+))
 
+    # Composite operators
     ω = map(θ) do op
-        CompositeOperator((op, op), permanent)
+        CompositeOperator((op, op), tilde)
     end
 
     (; θ, δ, σ, ω)

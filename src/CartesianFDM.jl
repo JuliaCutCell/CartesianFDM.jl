@@ -27,7 +27,7 @@ export TaggedVector
 export scalarfield, vectorfield
 export mask!
 
-export NonLocalOperator, CompositeOperator
+export StaggeredOperator, CenteredOperator, CompositeOperator
 export nonlocaloperators
 #export CenteredOperators, centeredoperators
 

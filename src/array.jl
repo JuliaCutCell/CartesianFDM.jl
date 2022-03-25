@@ -1,3 +1,4 @@
+# Potential name: AnnotatedArray
 struct TaggedArray{T,N,X,A<:AbstractArray{T,N}} <: AbstractArray{T,N}
     data::A
     tag::X
