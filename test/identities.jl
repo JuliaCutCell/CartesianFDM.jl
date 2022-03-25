@@ -9,11 +9,11 @@ U = vectorfield(:U, n)
 (; θ, δ, σ, ω) = nonlocaloperators(top, n)
 
 # check permanent product identity
-for (Δ, Σ, Ω, u) in zip(δ, σ, ω, U)
-    id = Φ .* (Δ(u .* Σ(Φ)) .+ Σ(u .* Δ(Φ))) .- Δ(u .* Ω(Φ, Φ))
+for (f, g, h, u) in zip(δ, σ, ω, U)
+    id = Φ .* (f(u .* g(Φ)) .+ g(u .* f(Φ))) .- f(u .* h(Φ, Φ))
     @assert all(iszero, expand.(id))
 
-    id = u .* (Δ(Φ .* Σ(u)) .+ Σ(Φ .* Δ(u))) .- Δ(Φ .* Ω(u, u))
+    id = u .* (f(Φ .* g(u)) .+ g(Φ .* f(u))) .- f(Φ .* h(u, u))
     @assert all(iszero, expand.(id))
 end
 
@@ -23,7 +23,7 @@ upwind((left, right), u) =
 
 upwindop = CompositeOperator.(tuple.(θ, Ref(identity)), Ref(upwind))
 
-conv = mapreduce(+, δ, upwindop, U) do Δ, op, u
-    Δ(op(Φ, u))
+conv = mapreduce(+, δ, upwindop, U) do d, op, u
+    d(op(Φ, u))
 end
 
