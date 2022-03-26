@@ -1,6 +1,6 @@
 module CartesianFDM
 
-import Base: parent, size, getindex, setindex!, showarg, +, -
+import Base: Fix1, Fix2, splat, parent, size, getindex, setindex!, showarg, +, -
 
 using Base.Iterators
 
@@ -8,13 +8,16 @@ using LinearAlgebra
 using SparseArrays
 
 using Reexport
+
 @reexport using Symbolics
 
-using StaticArrays
+@reexport using StaticArrays
 import StaticArrays: sacollect
 
 const subscripts = SVector('\u2081', '\u2082', '\u2083')
 const TupleN{T,N} = NTuple{N,T}
+
+export Stack, eachdim
 
 export scalar, vector
 
@@ -27,8 +30,10 @@ export TaggedVector
 export scalarfield, vectorfield
 export mask!
 
+export uniswitch, uniflip
 export StaggeredOperator, CenteredOperator, CompositeOperator
 export nonlocaloperators
+export Shift
 #export CenteredOperators, centeredoperators
 
 export Dirichlet, dir

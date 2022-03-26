@@ -1,39 +1,101 @@
-uniswitch(i) = Base.Fix2(getindex, i)
+uniswitch(i) = Fix2(getindex, i)
 
-uniflip(i) = Base.Fix2(i) do x, j
+uniflip(i) = Fix2(i) do x, j
     ntuple(length(x)) do k
         k == j ? !x[k] : x[k]
     end
 end
 
-
-"""
-
-1. Non-local ;
-1. Single argument (univariate) ;
-1. Unidimensional (maybe not?).
-
-!!! note
-
-    Instead of `dim`, include a function to be applied to the tag.
-    Useful to generalize to multiple dimension?
-
-"""
-struct StaggeredOperator{D,U,S,T,F} <: Function
-    switch::D
-    flip::U
-    forward::S
-    backward::T
+struct Shift{N,T,F} <: Function
+    top::T
+    left::Int
+    right::Int
     f::F
 end
 
-function (op::StaggeredOperator)(x::TaggedVector)
-    (; switch, flip, forward, backward, f) = op
+Shift{N}(top, left, right, f=zero) where {N} =
+    Shift{N,typeof(top),typeof(f)}(top, left, right, f)
+
+(shift::Shift{0})(x) = x
+
+function shiftedrange(N, start, stop)
+    res = UnitRange(min(start + max(0, N), stop),
+                    max(stop + min(0, N), start))
+    res
+end
+
+function (shift::Shift{N,NonPeriodic})(x) where {N}
+    (; top, left, right, f) = shift
+
+    x̂ = reshape(x, left, :, right)
+
+    y = similar(x)
+    ŷ = reshape(y, left, :, right)
+
+    start = firstindex(x̂, 2)
+    stop = lastindex(x̂, 2)
+    n = size(x̂, 2)
+
+    xrng = shiftedrange(N, start, stop)
+    yrng = shiftedrange(-N, start, stop)
+
+    ŷ[:,yrng,:] .= x̂[:,xrng,:]
+
+    yrng = shiftedrange(sign(N) * n - N, start, stop)
+
+    ŷ[:,yrng,:] .= f(eltype(ŷ))
+
+    y
+end
+
+function (shift::Shift{N,Periodic})(x) where {N}
+    (; top, left, right, f) = shift
+
+    x̂ = reshape(x, left, :, right)
+
+    y = similar(x)
+    ŷ = reshape(y, left, :, right)
+
+    start = firstindex(x̂, 2)
+    stop = lastindex(x̂, 2)
+    n = size(x̂, 2)
+
+    xrng = shiftedrange(N, start, stop)
+    yrng = shiftedrange(-N, start, stop)
+
+    ŷ[:,yrng,:] .= x̂[:,xrng,:]
+
+    xrng = shiftedrange(N - sign(N) * n, start, stop)
+    yrng = shiftedrange(sign(N) * n - N, start, stop)
+
+    ŷ[:,yrng,:] .= x̂[:,xrng,:]
+
+    y
+end
+
+"""
+
+1. Non-local (dah!) ;
+1. Single argument (univariate) ;
+1. Unidimensional otherwise 2 ^ D operators (too complex). Just compose to do
+multidimensional.
+
+"""
+struct StaggeredOperator{S,T,F,B} <: Function
+    switch::S
+    flip::T
+    forward::F
+    backward::B
+#    f::F
+end
+
+function (op::StaggeredOperator)(x::TaggedArray)
+    (; switch, flip, forward, backward) = op
     (; data, tag) = x
 
-    res = switch(tag) ?
-        f.(broadcast.(forward, ntuple(_ -> Ref(data), length(forward)))...) :
-        f.(broadcast.(backward, ntuple(_ -> Ref(data), length(backward)))...)
+    res = switch(tag) ? forward(data) : backward(data)
+#        f.(broadcast.(forward, ntuple(_ -> Ref(data), length(forward)))...) :
+#        f.(broadcast.(backward, ntuple(_ -> Ref(data), length(backward)))...)
 
     TaggedVector(res, flip(tag))
 end
@@ -65,13 +127,31 @@ unidim_bivar(dim, eye, plus, minus, f) =
                       (minus, eye),
                       f)
 
+combine(f, g...) = ∘(splat(Fix1(broadcast, f)), Stack(g...), Ref)
+
+#=
+# Is this really needed?
+struct CompositeOperator
+    pre
+    post
+end
+=#
+
 function nonlocaloperators(top, n)
     dims = ntuple(identity, length(top))
 
-    eye = LinearMap(I(prod(n)))
-    τ⁺ = LinearMap.(forwardshiftmatrices(top, n))
-    τ⁻ = LinearMap.(backwardshiftmatrices(top, n))
+    τ = map(eachdim(top)) do i
+        Shift{+1}(top[i], prod(n[1:i-1]), prod(n[i+1:end])),
+        Shift{-1}(top[i], prod(n[1:i-1]), prod(n[i+1:end]))
+    end
 
+    θ = map(eachdim(n), τ) do i, (plus, minus)
+        forward = combine(tuple, identity, plus)
+        backward = combine(tuple, minus, identity)
+        StaggeredOperator(uniswitch(i), uniflip(i), forward, backward)
+    end
+
+    #=
     # Staggered operators
     θ = unidim_bivar.(dims, Ref(eye), τ⁺, τ⁻, Ref(SVector))
     δ = unidim_bivar.(dims, Ref(eye), τ⁺, τ⁻, Ref(-))
@@ -83,6 +163,8 @@ function nonlocaloperators(top, n)
     end
 
     (; θ, δ, σ, ω)
+    =#
+    (; θ)
 end
 
 #UnidimOperator
