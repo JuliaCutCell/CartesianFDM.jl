@@ -14,10 +14,13 @@ using Reexport
 @reexport using StaticArrays
 import StaticArrays: sacollect
 
+const ArrayAbstract{N,T} = AbstractArray{T,N}
+
 const subscripts = SVector('\u2081', '\u2082', '\u2083')
 const TupleN{T,N} = NTuple{N,T}
 
-export Stack, eachdim
+export Splat
+export flatten, eachdim
 
 export scalar, vector
 
@@ -33,6 +36,7 @@ export mask!
 export uniswitch, uniflip
 export StaggeredOperator, CenteredOperator, CompositeOperator
 export nonlocaloperators
+export StencilArray
 export Shift
 #export CenteredOperators, centeredoperators
 

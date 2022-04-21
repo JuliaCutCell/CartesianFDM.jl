@@ -26,9 +26,23 @@ end
 Stack(fs...) = Stack(fs)
 
 (f::Stack)(x) = x .|> f.fs
+
+###
+struct Splat{F} <: Function
+    f::F
+
+    Splat(f::F) where {F} = new{F}(f)
+    Splat(f::Type{F}) where {F} = new{Type{F}}(f)
+end
+
+(f::Splat{F})(x) where {F} = f.f(x...)
+
 #
 #stack(fs...) = x -> x .|> fs
 
 eachdim(x) = eachindex(x)
 eachdim(::NTuple{N}) where {N} = ntuple(identity, Val(N))
+
+flatten() = ()
+flatten(x::NTuple, args...) = x..., flatten(args...)...
 

@@ -5,4 +5,3 @@ struct Star <: Stencil end
 
 const star = Star()
 
-

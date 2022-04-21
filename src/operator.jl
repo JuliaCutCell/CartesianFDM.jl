@@ -6,6 +6,64 @@ uniflip(i) = Fix2(i) do x, j
     end
 end
 
+#import Core.Compiler: return_type
+# lazy
+"""
+
+Lazy construction.
+
+"""
+struct StencilArray{S,W,P,T,N,F,A<:ArrayAbstract{N}} <: AbstractArray{T,N}
+    top::P
+    dim::Int
+    f::F
+    data::A
+end
+
+#=
+eltypes(arr::AbstractArray, ::Val{0}) = Tuple{eltype(arr)}
+@Base.pure eltypes(A::Tuple{Vararg{<:AbstractArray}}) = Tuple{(eltype.(A))...}
+=#
+
+function StencilArray{S,W}(top, dim, f, data::AbstractArray) where {S,W}
+#    infer_eltype() = Base._return_type(f, (NTuple{W,eltype(data)},))
+#    T = infer_eltype()
+    T = Base._return_type(f, (NTuple{W,eltype(data)},))
+    StencilArray{S,W,typeof(top),T,ndims(data),typeof(f),typeof(data)}(top, dim, f, data)
+end
+
+parent(arr::StencilArray) = arr.data
+size(arr::StencilArray) = size(parent(arr))
+
+function getindex(arr::StencilArray{S,W,Periodic}, i::Vararg{Int,N}) where {S,W,N}
+    (; top, dim, f, data) = arr
+
+    n = size(data)
+
+    ntuple(Val(W)) do s
+        j = ntuple(Val(N)) do d
+            d == dim ? mod(i[d] + S + s - 2, n[d]) + 1 : i[d]
+        end
+        data[j...]
+    end |> f
+end
+
+unsplat(x::Splat) = x.f
+unsplat(x) = x
+
+StencilArray{S,W,T}(top::P, dim, f::F, data::A) where {S,W,P,T,N,F,A<:ArrayAbstract{N}} =
+    StencilArray{S,W,P,T,N,F,A}(top, dim, f, data)
+
+#=
+struct ShiftedArray{S,P,T,N,F,A<:AbstractArray{T,N}} <: AbstractArray{T,N}
+    top::P
+    left::Int
+    right::Int
+    f::F
+    data::A
+end
+=#
+
 struct Shift{N,T,F} <: Function
     top::T
     left::Int
@@ -138,8 +196,6 @@ end
 =#
 
 function nonlocaloperators(top, n)
-    dims = ntuple(identity, length(top))
-
     τ = map(eachdim(top)) do i
         Shift{+1}(top[i], prod(n[1:i-1]), prod(n[i+1:end])),
         Shift{-1}(top[i], prod(n[1:i-1]), prod(n[i+1:end]))
