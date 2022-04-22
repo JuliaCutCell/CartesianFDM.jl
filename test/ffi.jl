@@ -7,9 +7,9 @@ using CartesianFDM
 # 0 < f < h
 # 0 < g < h
 const ε = eps(Float64)
-const f = 1 / 2
-const g = 1 / 2
-const h = 1.
+const f = 1 / 96
+const g = 1 / 96
+const h = 1 / 48
 const λ = [2., 3.]
 
 const T = typeof(ε)
@@ -57,10 +57,10 @@ n = length(V[1])
 top = ntuple(nonperiodic, 1)
 (; θ) = nonlocaloperators(top, (n,))
 
-arithmetic(x, y) = (x + y) / 2
+average(x::Vararg{T,N}) where {T,N} = sum(x) / N
 
 δ(x) = Base.splat(∘(-, -)).(θ[1](x))
-σ(x) = Base.splat(arithmetic).(θ[1](x))
+σ(x) = Base.splat(average).(θ[1](x))
 
 Φ = tocell.([collect(only(@variables Φ₋[1:n])),
              collect(only(@variables Φ₊[1:n]))])

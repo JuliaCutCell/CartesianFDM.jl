@@ -31,7 +31,7 @@ export cell, face
 export TaggedVector
 
 export scalarfield, vectorfield
-export mask!
+#export mask!
 
 export uniswitch, uniflip
 export StaggeredOperator, CenteredOperator, CompositeOperator
@@ -50,7 +50,8 @@ export CartesianFDMContext, cartesianfdmcontext
 
 export CartesianCapacities, cartesiancapacities
 
-export mask, gradient, divergence, strainrate, divergence2, dissipation, permanent
+#export mask
+export gradient, divergence, strainrate, divergence2, dissipation, permanent
 
 export linearize
 
